@@ -10,6 +10,7 @@ import xyz.hangao.community.community.dto.AccesstokenDTO;
 import xyz.hangao.community.community.dto.GithubUser;
 import xyz.hangao.community.community.model.User;
 import xyz.hangao.community.community.privoder.GithubPrivoder;
+import xyz.hangao.community.community.service.UserService;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -32,7 +33,7 @@ public class AuthorizeController {
     private String redirectUri;
 
     @Autowired
-    private UserMapper userMapper;
+    private UserService userService;
 
     @GetMapping("callback")
     public String callback(@RequestParam(name = "code") String code,
@@ -53,15 +54,26 @@ public class AuthorizeController {
             user.setToken(token);
             user.setName(githubUser.getName());
             user.setAccountId(String.valueOf(githubUser.getId()));
-            user.setGmtCreate(System.currentTimeMillis());
-            user.setGmtModified(user.getGmtCreate());
-            userMapper.insert(user);
+            user.setAvatarUrl(githubUser.getAvatar_url());
+            userService.createOrUpdate(user);
             response.addCookie(new Cookie("token",token));
+            request.getSession().setAttribute("user",user);
             //登陆成功，写cookie和session
             return "redirect:/";
         }else{
             //登陆失败，重新登陆
             return "redirect:/";
         }
+    }
+    @GetMapping("logout")
+    public String logout(HttpServletRequest request,
+                         HttpServletResponse response){
+
+        //清除用户
+        request.getSession().removeAttribute("user");
+        Cookie cookie = new Cookie("token",null);
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+        return "redirect:/";
     }
 }
